@@ -1,0 +1,1386 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lumines Frame Editor</title>
+  <style>
+    :root {
+      --bg: #f4efe6;
+      --panel: rgba(255, 250, 241, 0.92);
+      --panel-strong: #fff9f0;
+      --line: #c5b59d;
+      --text: #2a241d;
+      --muted: #736657;
+      --accent: #cf6f2b;
+      --accent-strong: #a94f14;
+      --shadow: 0 14px 36px rgba(66, 42, 17, 0.14);
+      --cell-size: min(6.2vw, 32px);
+      --board-cols: 16;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Yu Gothic UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(207, 111, 43, 0.18), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(79, 127, 105, 0.14), transparent 30%),
+        linear-gradient(160deg, #f8f3eb 0%, #efe5d5 100%);
+      min-height: 100vh;
+    }
+
+    .shell {
+      width: min(1760px, calc(100% - 32px));
+      margin: 24px auto;
+      display: grid;
+      gap: 16px;
+      grid-template-columns: 420px minmax(0, 1fr) 360px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid rgba(120, 95, 66, 0.18);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+
+    .sidebar {
+      padding: 18px;
+      display: grid;
+      gap: 16px;
+      align-content: start;
+    }
+
+    .main {
+      padding: 18px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .capture-panel {
+      padding: 18px;
+      display: grid;
+      gap: 16px;
+      align-content: start;
+    }
+
+    h1,
+    h2 {
+      margin: 0;
+      line-height: 1.2;
+    }
+
+    h1 {
+      font-size: 1.45rem;
+      letter-spacing: 0.02em;
+    }
+
+    h2 {
+      font-size: 1rem;
+    }
+
+    p,
+    label,
+    button,
+    input,
+    textarea,
+    select {
+      font: inherit;
+    }
+
+    .subtle {
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.5;
+    }
+
+    .group {
+      display: grid;
+      gap: 10px;
+      padding: 14px;
+      background: var(--panel-strong);
+      border: 1px solid rgba(120, 95, 66, 0.16);
+      border-radius: 14px;
+    }
+
+    .row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .color-palette {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .swatch,
+    .tool-button,
+    .action,
+    .frame-pill {
+      border: 1px solid rgba(88, 64, 38, 0.16);
+      border-radius: 12px;
+      background: #fffaf3;
+      color: var(--text);
+      transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    button:hover,
+    .swatch:hover,
+    .frame-pill:hover {
+      transform: translateY(-1px);
+      border-color: rgba(169, 79, 20, 0.4);
+    }
+
+    .swatch {
+      padding: 8px;
+      display: grid;
+      gap: 6px;
+      justify-items: start;
+    }
+
+    .swatch.active,
+    .tool-button.active,
+    .frame-pill.active {
+      border-color: var(--accent-strong);
+      background: #fff0df;
+      box-shadow: inset 0 0 0 1px rgba(169, 79, 20, 0.18);
+    }
+
+    .chip {
+      width: 100%;
+      height: 18px;
+      border-radius: 999px;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+    }
+
+    .board-wrap {
+      display: grid;
+      gap: 12px;
+      justify-items: center;
+      align-content: start;
+    }
+
+    .board-header {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(var(--board-cols), var(--cell-size));
+      gap: 2px;
+      padding: 12px;
+      border-radius: 7px;
+      background:
+        linear-gradient(180deg, rgba(43, 36, 29, 0.82), rgba(61, 49, 37, 0.96));
+      box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+        0 20px 40px rgba(45, 24, 8, 0.24);
+      touch-action: none;
+      user-select: none;
+    }
+
+    .cell {
+      width: var(--cell-size);
+      height: var(--cell-size);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.04);
+      position: relative;
+    }
+
+    .cell::after {
+      content: "";
+      position: absolute;
+      inset: 3px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.04);
+      pointer-events: none;
+    }
+
+    .cell[data-value="0"] { background: rgba(255, 255, 255, 0.05); }
+    .cell[data-value="1"] { background: #ff8d6c; }
+    .cell[data-value="2"] { background: #37c9bf; }
+    .cell[data-value="3"] { background: #f0d05b; }
+    .cell[data-value="4"] { background: #7a8cff; }
+    .cell[data-value="5"] { background: #9db78a; }
+    .cell[data-value="6"] {
+      background:
+        repeating-linear-gradient(45deg, #d7d0c6 0 6px, #a89f92 6px 12px);
+    }
+
+    .cell.cursor {
+      outline: 2px solid rgba(255, 255, 255, 0.9);
+      outline-offset: -2px;
+    }
+
+    .field-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .field {
+      display: grid;
+      gap: 4px;
+    }
+
+    .field input,
+    .field textarea,
+    .field select {
+      width: 100%;
+      border: 1px solid rgba(120, 95, 66, 0.24);
+      background: #fffdf9;
+      border-radius: 10px;
+      padding: 9px 10px;
+      color: var(--text);
+    }
+
+    .field textarea {
+      min-height: 130px;
+      resize: vertical;
+      font-family: Consolas, "SFMono-Regular", monospace;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    .action,
+    .tool-button {
+      padding: 9px 12px;
+    }
+
+    .action.primary {
+      background: var(--accent);
+      color: white;
+      border-color: rgba(169, 79, 20, 0.6);
+    }
+
+    .action.primary:hover {
+      background: var(--accent-strong);
+    }
+
+    .timeline {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+
+    .frame-pill {
+      min-width: 96px;
+      padding: 10px 12px;
+      text-align: left;
+      display: grid;
+      gap: 4px;
+      background: #fffaf4;
+    }
+
+    .frame-meta {
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    .footer-note {
+      color: var(--muted);
+      font-size: 0.86rem;
+    }
+
+    .square-summary {
+      width: 100%;
+      display: grid;
+      gap: 10px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: rgba(255, 249, 240, 0.82);
+      border: 1px solid rgba(120, 95, 66, 0.16);
+    }
+
+    .square-summary-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: baseline;
+      flex-wrap: wrap;
+    }
+
+    .square-summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 8px;
+    }
+
+    .square-chip {
+      display: grid;
+      gap: 4px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: #fffdf9;
+      border: 1px solid rgba(120, 95, 66, 0.14);
+    }
+
+    .square-chip-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+
+    .square-chip-count {
+      display: grid;
+      gap: 6px;
+    }
+
+    .square-count-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: baseline;
+    }
+
+    .square-count-mode {
+      font-size: 0.78rem;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    .square-count-value {
+      font-size: 1.15rem;
+      font-weight: 700;
+    }
+
+    .square-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      flex: 0 0 auto;
+    }
+
+    .paste-zone {
+      border: 2px dashed rgba(169, 79, 20, 0.28);
+      border-radius: 14px;
+      padding: 14px;
+      background: rgba(255, 248, 239, 0.78);
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .import-canvas-wrap {
+      width: 100%;
+      overflow: auto;
+      border-radius: 14px;
+      background: #f3eadb;
+      border: 1px solid rgba(120, 95, 66, 0.16);
+      padding: 10px;
+    }
+
+    .import-canvas {
+      display: block;
+      max-width: 100%;
+      background: #e6ded1;
+      cursor: crosshair;
+    }
+
+    @media (max-width: 1320px) {
+      .shell {
+        grid-template-columns: 420px minmax(0, 1fr);
+      }
+
+      .capture-panel {
+        grid-column: 1 / -1;
+      }
+    }
+
+    @media (max-width: 980px) {
+      .shell {
+        grid-template-columns: 1fr;
+      }
+
+      .field-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="panel sidebar">
+      <div>
+        <h1>Lumines Frame Editor</h1>
+        <p class="subtle">ルミネスの盤面説明用に、フレームを並べて再生できる最小エディタです。HTML 1枚で動きます。</p>
+      </div>
+
+      <section class="group">
+        <h2>Palette</h2>
+        <div id="palette" class="color-palette"></div>
+        <div class="row">
+          <button class="tool-button active" data-tool="paint" type="button">Paint</button>
+          <button class="tool-button" data-tool="erase" type="button">Erase</button>
+        </div>
+      </section>
+
+      <section class="group">
+        <h2>Frame</h2>
+        <div class="row">
+          <button id="prevFrame" class="action" type="button">Prev</button>
+          <button id="nextFrame" class="action" type="button">Next</button>
+          <button id="playToggle" class="action primary" type="button">Play</button>
+        </div>
+        <div class="row">
+          <button id="addFrame" class="action" type="button">Add</button>
+          <button id="duplicateFrame" class="action" type="button">Duplicate</button>
+          <button id="deleteFrame" class="action" type="button">Delete</button>
+        </div>
+        <div class="row">
+          <button id="clearFrame" class="action" type="button">Clear Frame</button>
+        </div>
+      </section>
+
+      <section class="group">
+        <h2>Frame Note</h2>
+        <label class="field">
+          <span>Caption</span>
+          <input id="frameCaption" type="text" placeholder="このフレームの説明">
+        </label>
+      </section>
+
+      <section class="group">
+        <h2>Export</h2>
+        <p class="subtle">現在表示しているフレームをPNGで書き出します。</p>
+        <div class="row">
+          <button id="exportPng" class="action primary" type="button">Export PNG</button>
+        </div>
+      </section>
+
+    </aside>
+
+    <main class="panel main">
+      <div class="board-wrap">
+        <div class="board-header">
+          <div>
+            <strong id="statusLine">Frame 1 / 1</strong>
+            <div class="subtle" id="captionPreview">キャプションなし</div>
+          </div>
+          <div class="subtle" id="projectSummary">Untitled</div>
+        </div>
+        <div id="board" class="board" aria-label="Lumines board"></div>
+        <section class="square-summary" aria-label="2x2 square counts in clear area">
+          <div class="square-summary-header">
+            <strong>Squares In Clear Area</strong>
+            <span class="subtle">現在の盤面全体がタイムラインで消える想定で、Normal は 2x2、BURST は 2x2 以上の正方形を色別に集計</span>
+          </div>
+          <div id="squareSummary" class="square-summary-grid"></div>
+        </section>
+        <div class="footer-note">左ドラッグで配置、右ドラッグで消去。単クリックでは変化しません。</div>
+      </div>
+
+      <section class="group">
+        <h2>Timeline</h2>
+        <div id="timeline" class="timeline"></div>
+      </section>
+    </main>
+
+    <aside class="panel capture-panel">
+      <section class="group">
+        <h2>Paste Capture</h2>
+        <div class="paste-zone">
+          ゲーム画面をコピーしてこのページで `Ctrl+V`。プレビュー上で盤面範囲をドラッグ指定して `Import From Image` を押します。
+        </div>
+        <div class="row">
+          <button id="importFromImage" class="action" type="button">Import From Image</button>
+          <button id="clearImportedImage" class="action" type="button">Clear Image</button>
+        </div>
+        <div class="import-canvas-wrap">
+          <canvas id="importCanvas" class="import-canvas" width="640" height="240"></canvas>
+        </div>
+        <div id="importStatus" class="subtle">画像未貼り付け。`Ctrl+V` で貼り付けてください。</div>
+      </section>
+    </aside>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "lumines-frame-editor-project";
+    const palette = [
+      { value: 1, label: "Orange", color: "#ff8d6c" },
+      { value: 2, label: "Mint", color: "#37c9bf" },
+      { value: 3, label: "Gold", color: "#f0d05b" },
+      { value: 4, label: "Blue", color: "#7a8cff" },
+      { value: 5, label: "Olive", color: "#9db78a" },
+      { value: 6, label: "Garbage", color: "linear-gradient(45deg, #d7d0c6, #a89f92)" }
+    ];
+
+    const state = {
+      cols: 16,
+      rows: 10,
+      title: "",
+      playbackMs: 650,
+      selectedColor: 1,
+      tool: "paint",
+      activeFrame: 0,
+      playing: false,
+      playTimer: null,
+      pointerDown: false,
+      pointerId: null,
+      pointerButton: 0,
+      dragStartX: -1,
+      dragStartY: -1,
+      dragActive: false,
+      lastPaintedKey: "",
+      importImage: null,
+      importSelection: null,
+      importSelecting: false,
+      importSelectionStart: null,
+      frames: [createFrame(16, 10)]
+    };
+
+    const boardEl = document.getElementById("board");
+    const paletteEl = document.getElementById("palette");
+    const timelineEl = document.getElementById("timeline");
+    const statusLineEl = document.getElementById("statusLine");
+    const captionPreviewEl = document.getElementById("captionPreview");
+    const projectSummaryEl = document.getElementById("projectSummary");
+    const squareSummaryEl = document.getElementById("squareSummary");
+    const captionEl = document.getElementById("frameCaption");
+    const importCanvasEl = document.getElementById("importCanvas");
+    const importStatusEl = document.getElementById("importStatus");
+    const importSourceCanvas = document.createElement("canvas");
+    function createBoard(cols, rows) {
+      return Array.from({ length: rows }, () => Array(cols).fill(0));
+    }
+
+    function createFrame(cols, rows) {
+      return { board: createBoard(cols, rows), caption: "" };
+    }
+
+    function cloneBoard(board) {
+      return board.map((row) => [...row]);
+    }
+
+    function cloneFrame(frame) {
+      return { board: cloneBoard(frame.board), caption: frame.caption || "" };
+    }
+
+    function currentFrame() {
+      return state.frames[state.activeFrame];
+    }
+
+    function renderPalette() {
+      paletteEl.innerHTML = "";
+      palette.forEach((item) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "swatch" + (state.selectedColor === item.value ? " active" : "");
+        button.dataset.value = String(item.value);
+        button.innerHTML = `
+          <div class="chip" style="background: ${item.color};"></div>
+          <strong>${item.label}</strong>
+        `;
+        button.addEventListener("click", () => {
+          state.selectedColor = item.value;
+          renderPalette();
+        });
+        paletteEl.appendChild(button);
+      });
+    }
+
+    function renderToolButtons() {
+      document.querySelectorAll(".tool-button").forEach((button) => {
+        button.classList.toggle("active", button.dataset.tool === state.tool);
+      });
+    }
+
+    function renderBoard() {
+      boardEl.innerHTML = "";
+      boardEl.style.setProperty("--board-cols", String(state.cols));
+      const frame = currentFrame();
+      frame.board.forEach((row, y) => {
+        row.forEach((value, x) => {
+          const cell = document.createElement("div");
+          cell.className = "cell";
+          cell.dataset.x = String(x);
+          cell.dataset.y = String(y);
+          cell.dataset.value = String(value);
+          boardEl.appendChild(cell);
+        });
+      });
+    }
+
+    function renderTimeline() {
+      timelineEl.innerHTML = "";
+      state.frames.forEach((frame, index) => {
+        const pill = document.createElement("button");
+        pill.type = "button";
+        pill.className = "frame-pill" + (index === state.activeFrame ? " active" : "");
+        pill.innerHTML = `
+          <strong>Frame ${index + 1}</strong>
+          <span class="frame-meta">${frame.caption || "キャプションなし"}</span>
+        `;
+        pill.addEventListener("click", () => {
+          state.activeFrame = index;
+          syncFields();
+          render();
+        });
+        timelineEl.appendChild(pill);
+      });
+    }
+
+    function syncFields() {
+      const frame = currentFrame();
+      captionEl.value = frame.caption || "";
+    }
+
+    function getPlayablePalette() {
+      return palette.filter((item) => item.value >= 1 && item.value <= 5);
+    }
+
+    function buildColorPrefix(board, colorValue) {
+      const rows = board.length;
+      const cols = board[0]?.length || 0;
+      const prefix = Array.from({ length: rows + 1 }, () => Array(cols + 1).fill(0));
+
+      for (let y = 0; y < rows; y += 1) {
+        for (let x = 0; x < cols; x += 1) {
+          const match = board[y][x] === colorValue ? 1 : 0;
+          prefix[y + 1][x + 1] =
+            prefix[y][x + 1] +
+            prefix[y + 1][x] -
+            prefix[y][x] +
+            match;
+        }
+      }
+
+      return prefix;
+    }
+
+    function getAreaSum(prefix, x, y, size) {
+      return (
+        prefix[y + size][x + size] -
+        prefix[y][x + size] -
+        prefix[y + size][x] +
+        prefix[y][x]
+      );
+    }
+
+    function countSquaresInClearArea(board, includeLargerSquares) {
+      const counts = new Map(
+        getPlayablePalette().map((item) => [item.value, 0])
+      );
+      const maxSize = Math.min(board.length, board[0]?.length || 0);
+
+      getPlayablePalette().forEach((item) => {
+        const prefix = buildColorPrefix(board, item.value);
+        const endSize = includeLargerSquares ? maxSize : 2;
+
+        for (let size = 2; size <= endSize; size += 1) {
+          for (let y = 0; y <= board.length - size; y += 1) {
+            for (let x = 0; x <= board[y].length - size; x += 1) {
+              if (getAreaSum(prefix, x, y, size) === size * size) {
+                counts.set(item.value, (counts.get(item.value) || 0) + 1);
+              }
+            }
+          }
+        }
+      });
+
+      return getPlayablePalette()
+        .map((item) => ({
+          ...item,
+          count: counts.get(item.value) || 0
+        }));
+    }
+
+    function renderSquareSummary(board) {
+      const normalSquares = countSquaresInClearArea(board, false);
+      const burstSquares = countSquaresInClearArea(board, true);
+      squareSummaryEl.innerHTML = "";
+      const burstMap = new Map(burstSquares.map((item) => [item.value, item.count]));
+
+      normalSquares.forEach((item) => {
+        const chip = document.createElement("div");
+        chip.className = "square-chip";
+        chip.innerHTML = `
+          <div class="square-chip-label">
+            <span class="square-dot" style="background: ${item.color};"></span>
+            <span>${item.label}</span>
+          </div>
+          <div class="square-chip-count">
+            <div class="square-count-row">
+              <span class="square-count-mode">Normal</span>
+              <span class="square-count-value">${item.count}</span>
+            </div>
+            <div class="square-count-row">
+              <span class="square-count-mode">BURST</span>
+              <span class="square-count-value">${burstMap.get(item.value) || 0}</span>
+            </div>
+          </div>
+        `;
+        squareSummaryEl.appendChild(chip);
+      });
+    }
+
+    function renderStatus() {
+      const frame = currentFrame();
+      statusLineEl.textContent = `Frame ${state.activeFrame + 1} / ${state.frames.length}`;
+      captionPreviewEl.textContent = frame.caption || "キャプションなし";
+      projectSummaryEl.textContent = "Fixed 16 x 10";
+      renderSquareSummary(frame.board);
+    }
+
+    function render() {
+      renderPalette();
+      renderToolButtons();
+      renderBoard();
+      renderTimeline();
+      renderStatus();
+      renderImportCanvas();
+    }
+
+    function applyTool(x, y, forcedValue) {
+      const frame = currentFrame();
+      const nextValue = forcedValue ?? (state.tool === "erase" ? 0 : state.selectedColor);
+      frame.board[y][x] = nextValue;
+      const cell = getCellElement(x, y);
+      if (cell) {
+        cell.dataset.value = String(nextValue);
+      }
+      renderStatus();
+    }
+
+    function getCellElement(x, y) {
+      return boardEl.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
+    }
+
+    function getCellFromPointerEvent(event) {
+      const hit = document.elementFromPoint(event.clientX, event.clientY);
+      const cell = hit?.closest?.(".cell");
+      if (!cell || !boardEl.contains(cell)) return null;
+      return {
+        x: Number(cell.dataset.x),
+        y: Number(cell.dataset.y)
+      };
+    }
+
+    function resetPointerState() {
+      state.pointerDown = false;
+      state.pointerId = null;
+      state.pointerButton = 0;
+      state.dragStartX = -1;
+      state.dragStartY = -1;
+      state.dragActive = false;
+      state.lastPaintedKey = "";
+    }
+
+    function beginPointerDraw(event) {
+      const cell = event.target.closest(".cell");
+      if (!cell || !boardEl.contains(cell)) return;
+
+      state.pointerDown = true;
+      state.pointerId = event.pointerId;
+      state.pointerButton = event.button;
+      state.dragStartX = Number(cell.dataset.x);
+      state.dragStartY = Number(cell.dataset.y);
+      state.dragActive = false;
+      state.lastPaintedKey = "";
+
+      boardEl.setPointerCapture(event.pointerId);
+      event.preventDefault();
+    }
+
+    function movePointerDraw(event) {
+      if (!state.pointerDown || state.pointerId !== event.pointerId) return;
+      if (event.buttons === 0) {
+        resetPointerState();
+        return;
+      }
+
+      const cell = getCellFromPointerEvent(event);
+      if (!cell) return;
+
+      if (!state.dragActive) {
+        if (cell.x === state.dragStartX && cell.y === state.dragStartY) return;
+        state.dragActive = true;
+        applyTool(state.dragStartX, state.dragStartY, state.pointerButton === 2 ? 0 : undefined);
+        state.lastPaintedKey = `${state.dragStartX},${state.dragStartY}`;
+      }
+
+      const key = `${cell.x},${cell.y}`;
+      if (state.lastPaintedKey === key) return;
+      state.lastPaintedKey = key;
+      applyTool(cell.x, cell.y, state.pointerButton === 2 ? 0 : undefined);
+    }
+
+    function endPointerDraw(event) {
+      if (
+        state.pointerDown &&
+        state.pointerId !== null &&
+        event.pointerId === state.pointerId &&
+        !state.dragActive &&
+        state.dragStartX >= 0 &&
+        state.dragStartY >= 0
+      ) {
+        applyTool(state.dragStartX, state.dragStartY, state.pointerButton === 2 ? 0 : undefined);
+      }
+      if (state.pointerId !== null && event.pointerId === state.pointerId && boardEl.hasPointerCapture(event.pointerId)) {
+        boardEl.releasePointerCapture(event.pointerId);
+      }
+      resetPointerState();
+    }
+
+    function fillFrame(value) {
+      const frame = currentFrame();
+      frame.board = frame.board.map((row) => row.map(() => value));
+      render();
+    }
+
+    function addFrame(mode) {
+      const source = currentFrame();
+      const frame = mode === "blank" ? createFrame(state.cols, state.rows) : cloneFrame(source);
+      state.frames.splice(state.activeFrame + 1, 0, frame);
+      state.activeFrame += 1;
+      syncFields();
+      render();
+    }
+
+    function deleteFrame() {
+      if (state.frames.length === 1) {
+        state.frames[0] = createFrame(state.cols, state.rows);
+        state.activeFrame = 0;
+      } else {
+        state.frames.splice(state.activeFrame, 1);
+        state.activeFrame = Math.max(0, state.activeFrame - 1);
+      }
+      syncFields();
+      render();
+    }
+
+    function clearFrame() {
+      state.frames[state.activeFrame] = createFrame(state.cols, state.rows);
+      syncFields();
+      render();
+    }
+
+    function nextFrame(step = 1) {
+      state.activeFrame = (state.activeFrame + step + state.frames.length) % state.frames.length;
+      syncFields();
+      render();
+    }
+
+    function startPlayback() {
+      stopPlayback();
+      state.playing = true;
+      document.getElementById("playToggle").textContent = "Stop";
+      state.playTimer = window.setInterval(() => {
+        nextFrame(1);
+      }, state.playbackMs);
+    }
+
+    function stopPlayback() {
+      state.playing = false;
+      document.getElementById("playToggle").textContent = "Play";
+      if (state.playTimer) {
+        window.clearInterval(state.playTimer);
+        state.playTimer = null;
+      }
+    }
+
+    function resizeMatrix(board, cols, rows) {
+      return Array.from({ length: rows }, (_, y) =>
+        Array.from({ length: cols }, (_, x) => board[y]?.[x] ?? 0)
+      );
+    }
+
+    function clamp(value, min, max) {
+      if (Number.isNaN(value)) return min;
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function saveLocal() {
+      const payload = {
+        version: 1,
+        title: state.title,
+        cols: state.cols,
+        rows: state.rows,
+        playbackMs: state.playbackMs,
+        frames: state.frames
+      };
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    }
+
+    function loadLocal() {
+      const saved = window.localStorage.getItem(STORAGE_KEY);
+      if (!saved) {
+        window.alert("保存済みデータがありません。");
+        return;
+      }
+      try {
+        const payload = JSON.parse(saved);
+        if (!payload || !Array.isArray(payload.frames) || !payload.cols || !payload.rows) {
+          throw new Error("invalid payload");
+        }
+        state.title = payload.title || "";
+        state.cols = payload.cols;
+        state.rows = payload.rows;
+        state.playbackMs = payload.playbackMs || 650;
+        state.frames = payload.frames.map((frame) => ({
+          caption: frame.caption || "",
+          board: frame.board.map((row) => row.map((value) => Number(value) || 0))
+        }));
+        state.activeFrame = 0;
+        syncFields();
+        render();
+      } catch (error) {
+        window.alert("保存済みデータの読み込みに失敗しました。");
+      }
+    }
+
+    function exportPng() {
+      const frame = currentFrame();
+      const cellSize = 36;
+      const gap = 2;
+      const padding = 14;
+      const captionHeight = frame.caption ? 34 : 0;
+      const width = padding * 2 + state.cols * cellSize + (state.cols - 1) * gap;
+      const height = padding * 2 + state.rows * cellSize + (state.rows - 1) * gap + captionHeight;
+      const canvas = document.createElement("canvas");
+      const scale = window.devicePixelRatio > 1 ? 2 : 1;
+      canvas.width = width * scale;
+      canvas.height = height * scale;
+      const ctx = canvas.getContext("2d");
+
+      if (!ctx) {
+        window.alert("PNG書き出しに失敗しました。");
+        return;
+      }
+
+      ctx.scale(scale, scale);
+
+      const bg = ctx.createLinearGradient(0, 0, width, height);
+      bg.addColorStop(0, "#2b241d");
+      bg.addColorStop(1, "#3d3125");
+      ctx.fillStyle = bg;
+      roundRect(ctx, 0, 0, width, height, 18);
+      ctx.fill();
+
+      const colorMap = {
+        0: "rgba(255,255,255,0.05)",
+        1: "#ff8d6c",
+        2: "#37c9bf",
+        3: "#f0d05b",
+        4: "#7a8cff",
+        5: "#9db78a"
+      };
+
+      frame.board.forEach((row, y) => {
+        row.forEach((value, x) => {
+          const px = padding + x * (cellSize + gap);
+          const py = padding + y * (cellSize + gap);
+          if (value === 6) {
+            drawGarbageCell(ctx, px, py, cellSize);
+          } else {
+            ctx.fillStyle = colorMap[value] || colorMap[0];
+            roundRect(ctx, px, py, cellSize, cellSize, 6);
+            ctx.fill();
+          }
+
+          ctx.fillStyle = "rgba(255,255,255,0.06)";
+          roundRect(ctx, px + 3, py + 3, cellSize - 6, cellSize - 6, 4);
+          ctx.fill();
+        });
+      });
+
+      if (frame.caption) {
+        ctx.fillStyle = "rgba(255, 248, 236, 0.92)";
+        ctx.font = '16px "Segoe UI", "Yu Gothic UI", sans-serif';
+        ctx.fillText(frame.caption, padding, height - 12);
+      }
+
+      const link = document.createElement("a");
+      const safeTitle = (state.title || "lumines-frame").replace(/[\\/:*?\"<>|]/g, "-");
+      link.href = canvas.toDataURL("image/png");
+      link.download = `${safeTitle}-frame-${state.activeFrame + 1}.png`;
+      link.click();
+    }
+
+    function roundRect(ctx, x, y, width, height, radius) {
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.lineTo(x + width - radius, y);
+      ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+      ctx.lineTo(x + width, y + height - radius);
+      ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+      ctx.lineTo(x + radius, y + height);
+      ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+      ctx.lineTo(x, y + radius);
+      ctx.quadraticCurveTo(x, y, x + radius, y);
+      ctx.closePath();
+    }
+
+    function drawGarbageCell(ctx, x, y, size) {
+      const patternCanvas = document.createElement("canvas");
+      patternCanvas.width = 12;
+      patternCanvas.height = 12;
+      const pctx = patternCanvas.getContext("2d");
+      if (!pctx) return;
+      pctx.fillStyle = "#d7d0c6";
+      pctx.fillRect(0, 0, 12, 12);
+      pctx.strokeStyle = "#a89f92";
+      pctx.lineWidth = 4;
+      pctx.beginPath();
+      pctx.moveTo(-2, 12);
+      pctx.lineTo(12, -2);
+      pctx.moveTo(4, 14);
+      pctx.lineTo(14, 4);
+      pctx.stroke();
+
+      const pattern = ctx.createPattern(patternCanvas, "repeat");
+      ctx.fillStyle = pattern || "#b8afa2";
+      roundRect(ctx, x, y, size, size, 6);
+      ctx.fill();
+    }
+
+    function renderImportCanvas() {
+      const ctx = importCanvasEl.getContext("2d");
+      if (!ctx) return;
+
+      const maxWidth = 900;
+      const maxHeight = 560;
+
+      if (!state.importImage) {
+        importCanvasEl.width = maxWidth;
+        importCanvasEl.height = 240;
+        ctx.fillStyle = "#e8dfd3";
+        ctx.fillRect(0, 0, importCanvasEl.width, importCanvasEl.height);
+        ctx.fillStyle = "#7a6f63";
+        ctx.font = '16px "Segoe UI", "Yu Gothic UI", sans-serif';
+        ctx.fillText("Paste image with Ctrl+V", 24, 42);
+        ctx.fillText("Then drag a rectangle over the playfield.", 24, 70);
+        return;
+      }
+
+      const scale = Math.min(maxWidth / state.importImage.width, maxHeight / state.importImage.height, 1);
+      const drawWidth = Math.max(1, Math.round(state.importImage.width * scale));
+      const drawHeight = Math.max(1, Math.round(state.importImage.height * scale));
+      importCanvasEl.width = drawWidth;
+      importCanvasEl.height = drawHeight;
+
+      ctx.clearRect(0, 0, drawWidth, drawHeight);
+      ctx.drawImage(state.importImage, 0, 0, drawWidth, drawHeight);
+
+      if (!state.importSelection) return;
+
+      const { x, y, width, height } = state.importSelection;
+      ctx.save();
+      ctx.fillStyle = "rgba(207, 111, 43, 0.18)";
+      ctx.strokeStyle = "rgba(207, 111, 43, 0.95)";
+      ctx.lineWidth = 2;
+      ctx.fillRect(x, y, width, height);
+      ctx.strokeRect(x, y, width, height);
+
+      ctx.strokeStyle = "rgba(255,255,255,0.7)";
+      ctx.lineWidth = 1;
+      for (let i = 1; i < state.cols; i += 1) {
+        const gx = x + (width / state.cols) * i;
+        ctx.beginPath();
+        ctx.moveTo(gx, y);
+        ctx.lineTo(gx, y + height);
+        ctx.stroke();
+      }
+      for (let i = 1; i < state.rows; i += 1) {
+        const gy = y + (height / state.rows) * i;
+        ctx.beginPath();
+        ctx.moveTo(x, gy);
+        ctx.lineTo(x + width, gy);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function setImportStatus(message) {
+      importStatusEl.textContent = message;
+    }
+
+    function loadImportedImage(src) {
+      const image = new Image();
+      image.onload = () => {
+        state.importImage = image;
+        state.importSelection = null;
+        state.importSelecting = false;
+        state.importSelectionStart = null;
+        setImportStatus("画像を読み込みました。プレビュー上で盤面範囲をドラッグ指定してください。");
+        renderImportCanvas();
+      };
+      image.src = src;
+    }
+
+    function normalizeSelection(a, b) {
+      const x = Math.min(a.x, b.x);
+      const y = Math.min(a.y, b.y);
+      const width = Math.abs(b.x - a.x);
+      const height = Math.abs(b.y - a.y);
+      return { x, y, width, height };
+    }
+
+    function getCanvasPoint(event) {
+      const rect = importCanvasEl.getBoundingClientRect();
+      const scaleX = importCanvasEl.width / rect.width;
+      const scaleY = importCanvasEl.height / rect.height;
+      return {
+        x: Math.max(0, Math.min(importCanvasEl.width, (event.clientX - rect.left) * scaleX)),
+        y: Math.max(0, Math.min(importCanvasEl.height, (event.clientY - rect.top) * scaleY))
+      };
+    }
+
+    function beginImportSelection(event) {
+      if (!state.importImage) return;
+      state.importSelecting = true;
+      state.importSelectionStart = getCanvasPoint(event);
+      state.importSelection = { ...state.importSelectionStart, width: 0, height: 0 };
+      importCanvasEl.setPointerCapture(event.pointerId);
+      renderImportCanvas();
+    }
+
+    function moveImportSelection(event) {
+      if (!state.importSelecting || !state.importSelectionStart) return;
+      const point = getCanvasPoint(event);
+      state.importSelection = normalizeSelection(state.importSelectionStart, point);
+      renderImportCanvas();
+    }
+
+    function endImportSelection(event) {
+      if (!state.importSelecting) return;
+      if (importCanvasEl.hasPointerCapture(event.pointerId)) {
+        importCanvasEl.releasePointerCapture(event.pointerId);
+      }
+      state.importSelecting = false;
+      if (!state.importSelection || state.importSelection.width < 8 || state.importSelection.height < 8) {
+        state.importSelection = null;
+        setImportStatus("選択範囲が小さすぎます。もう一度ドラッグしてください。");
+      } else {
+        setImportStatus("選択範囲を更新しました。`Import From Image` で盤面に反映できます。");
+      }
+      renderImportCanvas();
+    }
+
+    function rgbToHsl(r, g, b) {
+      const nr = r / 255;
+      const ng = g / 255;
+      const nb = b / 255;
+      const max = Math.max(nr, ng, nb);
+      const min = Math.min(nr, ng, nb);
+      const l = (max + min) / 2;
+      const d = max - min;
+      let h = 0;
+      let s = 0;
+
+      if (d !== 0) {
+        s = d / (1 - Math.abs(2 * l - 1));
+        switch (max) {
+          case nr: h = ((ng - nb) / d) % 6; break;
+          case ng: h = (nb - nr) / d + 2; break;
+          default: h = (nr - ng) / d + 4; break;
+        }
+        h *= 60;
+        if (h < 0) h += 360;
+      }
+
+      return { h, s, l };
+    }
+
+    function sampleCellAverage(ctx, x, y, width, height) {
+      const insetX = Math.max(1, Math.floor(width * 0.2));
+      const insetY = Math.max(1, Math.floor(height * 0.2));
+      const sx = Math.floor(x + insetX);
+      const sy = Math.floor(y + insetY);
+      const sw = Math.max(1, Math.floor(width - insetX * 2));
+      const sh = Math.max(1, Math.floor(height - insetY * 2));
+      const data = ctx.getImageData(sx, sy, sw, sh).data;
+      let r = 0;
+      let g = 0;
+      let b = 0;
+      let count = 0;
+
+      for (let i = 0; i < data.length; i += 4) {
+        r += data[i];
+        g += data[i + 1];
+        b += data[i + 2];
+        count += 1;
+      }
+
+      return {
+        r: Math.round(r / count),
+        g: Math.round(g / count),
+        b: Math.round(b / count)
+      };
+    }
+
+    function classifyColor(rgb) {
+      const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+      const luminance = (rgb.r * 0.2126 + rgb.g * 0.7152 + rgb.b * 0.0722) / 255;
+
+      if (luminance < 0.16) return 0;
+      if (hsl.s < 0.14 && luminance > 0.25 && luminance < 0.82) return 6;
+
+      const targets = [
+        { value: 1, rgb: { r: 255, g: 141, b: 108 } },
+        { value: 2, rgb: { r: 55, g: 201, b: 191 } },
+        { value: 3, rgb: { r: 240, g: 208, b: 91 } },
+        { value: 4, rgb: { r: 122, g: 140, b: 255 } },
+        { value: 5, rgb: { r: 157, g: 183, b: 138 } }
+      ];
+
+      let best = { value: 0, distance: Number.POSITIVE_INFINITY };
+      for (const target of targets) {
+        const dr = rgb.r - target.rgb.r;
+        const dg = rgb.g - target.rgb.g;
+        const db = rgb.b - target.rgb.b;
+        const distance = dr * dr + dg * dg + db * db;
+        if (distance < best.distance) {
+          best = { value: target.value, distance };
+        }
+      }
+      return best.value;
+    }
+
+    function importFromImage() {
+      if (!state.importImage || !state.importSelection) {
+        window.alert("先に画像を貼り付けて、盤面範囲をドラッグ指定してください。");
+        return;
+      }
+
+      const scaleX = state.importImage.width / importCanvasEl.width;
+      const scaleY = state.importImage.height / importCanvasEl.height;
+      const crop = {
+        x: Math.floor(state.importSelection.x * scaleX),
+        y: Math.floor(state.importSelection.y * scaleY),
+        width: Math.max(1, Math.floor(state.importSelection.width * scaleX)),
+        height: Math.max(1, Math.floor(state.importSelection.height * scaleY))
+      };
+
+      importSourceCanvas.width = state.importImage.width;
+      importSourceCanvas.height = state.importImage.height;
+      const sourceCtx = importSourceCanvas.getContext("2d", { willReadFrequently: true });
+      if (!sourceCtx) {
+        window.alert("画像解析に失敗しました。");
+        return;
+      }
+      sourceCtx.clearRect(0, 0, importSourceCanvas.width, importSourceCanvas.height);
+      sourceCtx.drawImage(state.importImage, 0, 0);
+
+      const nextBoard = createBoard(state.cols, state.rows);
+      const cellWidth = crop.width / state.cols;
+      const cellHeight = crop.height / state.rows;
+
+      for (let y = 0; y < state.rows; y += 1) {
+        for (let x = 0; x < state.cols; x += 1) {
+          const rgb = sampleCellAverage(
+            sourceCtx,
+            crop.x + cellWidth * x,
+            crop.y + cellHeight * y,
+            cellWidth,
+            cellHeight
+          );
+          nextBoard[y][x] = classifyColor(rgb);
+        }
+      }
+
+      currentFrame().board = nextBoard;
+      render();
+      setImportStatus("画像から現在フレームへ反映しました。誤判定があれば手で微修正してください。");
+    }
+
+    boardEl.addEventListener("pointerdown", beginPointerDraw);
+    boardEl.addEventListener("pointermove", movePointerDraw);
+    boardEl.addEventListener("pointerup", endPointerDraw);
+    boardEl.addEventListener("pointercancel", endPointerDraw);
+    boardEl.addEventListener("lostpointercapture", resetPointerState);
+    boardEl.addEventListener("contextmenu", (event) => event.preventDefault());
+    importCanvasEl.addEventListener("pointerdown", beginImportSelection);
+    importCanvasEl.addEventListener("pointermove", moveImportSelection);
+    importCanvasEl.addEventListener("pointerup", endImportSelection);
+    importCanvasEl.addEventListener("pointercancel", endImportSelection);
+
+    document.getElementById("prevFrame").addEventListener("click", () => nextFrame(-1));
+    document.getElementById("nextFrame").addEventListener("click", () => nextFrame(1));
+    document.getElementById("playToggle").addEventListener("click", () => {
+      state.playing ? stopPlayback() : startPlayback();
+    });
+    document.getElementById("addFrame").addEventListener("click", () => addFrame("blank"));
+    document.getElementById("duplicateFrame").addEventListener("click", () => addFrame("clone"));
+    document.getElementById("deleteFrame").addEventListener("click", deleteFrame);
+    document.getElementById("clearFrame").addEventListener("click", clearFrame);
+    document.getElementById("exportPng").addEventListener("click", exportPng);
+    document.getElementById("importFromImage").addEventListener("click", importFromImage);
+    document.getElementById("clearImportedImage").addEventListener("click", () => {
+      state.importImage = null;
+      state.importSelection = null;
+      state.importSelecting = false;
+      state.importSelectionStart = null;
+      setImportStatus("画像未貼り付け。`Ctrl+V` で貼り付けてください。");
+      renderImportCanvas();
+    });
+
+    captionEl.addEventListener("input", (event) => {
+      currentFrame().caption = event.target.value;
+      renderTimeline();
+      renderStatus();
+    });
+
+    document.querySelectorAll(".tool-button").forEach((button) => {
+      button.addEventListener("click", () => {
+        state.tool = button.dataset.tool;
+        renderToolButtons();
+      });
+    });
+
+    window.addEventListener("keydown", (event) => {
+      if (event.target.matches("input, textarea")) return;
+      if (event.key === "ArrowRight") nextFrame(1);
+      if (event.key === "ArrowLeft") nextFrame(-1);
+      if (event.key === " ") {
+        event.preventDefault();
+        state.playing ? stopPlayback() : startPlayback();
+      }
+      if (event.key.toLowerCase() === "d") addFrame("clone");
+      if (event.key.toLowerCase() === "n") addFrame("blank");
+    });
+
+    window.addEventListener("paste", (event) => {
+      const items = Array.from(event.clipboardData?.items || []);
+      const imageItem = items.find((item) => item.type.startsWith("image/"));
+      if (!imageItem) return;
+      const file = imageItem.getAsFile();
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === "string") {
+          loadImportedImage(reader.result);
+        }
+      };
+      reader.readAsDataURL(file);
+      event.preventDefault();
+    });
+
+    syncFields();
+    render();
+  </script>
+</body>
+</html>
