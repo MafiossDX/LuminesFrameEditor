@@ -6,6 +6,8 @@
 
 GitHub Pages でそのまま公開しやすいように、実装は `lumines_frame_editor.html` 1 枚にまとまっています。
 
+URL: https://mafiossdx.github.io/LuminesFrameEditor/lumines_frame_editor.html
+
 ## できること
 
 - 固定サイズ `16 x 10` の盤面を編集

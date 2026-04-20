@@ -4,6 +4,8 @@
 
 To keep it easy to publish on GitHub Pages, the implementation is contained in a single file: `lumines_frame_editor.html`.
 
+URL: https://mafiossdx.github.io/LuminesFrameEditor/lumines_frame_editor.html
+
 ## Features
 
 - Edit a fixed-size `16 x 10` board
