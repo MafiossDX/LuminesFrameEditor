@@ -1,6 +1,7 @@
 # Lumines Frame Editor
 
 [English README](./README.en.md)
+[简体中文 README](./README.cns.md)
 
 `Lumines Frame Editor` は、ルミネスの盤面をフレーム単位で並べて整理し、あとからじっくり検討するためのシングルファイルツールです。盤面を手で描き直しながら、フレームを追加・複製・再生して、手順や変化を視覚的に追えます。
 

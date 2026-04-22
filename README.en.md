@@ -43,6 +43,7 @@ If you want to reconstruct a board from an image, copy a game screen, press `Ctr
 - `lumines_frame_editor.html`: application
 - `README.md`: Japanese README
 - `README.en.md`: English README
+- `README.cns.md`: Simplified Chinese README
 
 ## Purpose
 
