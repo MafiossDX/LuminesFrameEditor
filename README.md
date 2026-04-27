@@ -7,15 +7,16 @@
 
 GitHub Pages でそのまま公開しやすいように、実装は `lumines_frame_editor.html` 1 枚にまとまっています。
 
-URL: https://mafiossdx.github.io/LuminesFrameEditor/lumines_frame_editor.html
+URL: [https://mafiossdx.github.io/LuminesFrameEditor/lumines_frame_editor.html](https://mafiossdx.github.io/LuminesFrameEditor/lumines_frame_editor.html)
 
 ## できること
 
 - 固定サイズ `16 x 10` の盤面を編集
-- 5 色 + Garbage を使ったセル配置
+- 6 色 + Garbage を使ったセル配置
 - フレームの追加、複製、削除、クリア
 - タイムラインを並べてフレーム移動と連続再生
 - 各フレームにキャプションを付与
+- 現在フレーム上で、`3x3` 以上の中で最も大きい BURST 形 1 つだけに枠を表示
 - 現在フレームを PNG で書き出し
 - ゲーム画面を `Ctrl+V` で貼り付け、盤面範囲を選択して現在フレームへ取り込み
 - 現在の盤面について、クリア領域にある色別の正方形数を表示
@@ -28,7 +29,7 @@ URL: https://mafiossdx.github.io/LuminesFrameEditor/lumines_frame_editor.html
 2. 左側のパレットから色を選び、盤面をクリックまたはドラッグして編集する
 3. `Add` / `Duplicate` でフレームを増やし、必要なら `Caption` に説明を書く
 4. `Play` でフレームを順番に再生する
-5. 必要に応じて `Export PNG` で現在フレームを書き出す
+5. 必要に応じて `BURST枠を表示` を ON にして、`Export PNG` で現在フレームを書き出す
 
 画像から盤面を起こしたい場合は、ゲーム画面をコピーしてページ上で `Ctrl+V` を押し、右側プレビューで盤面範囲をドラッグ選択して `Import From Image` を実行します。色判定は自動ですが、誤差が出る場合は手で微修正できます。あまり精度はよくありません。
 
@@ -44,7 +45,9 @@ URL: https://mafiossdx.github.io/LuminesFrameEditor/lumines_frame_editor.html
 ## ファイル構成
 
 - `lumines_frame_editor.html`: 本体
-- `README.md`: このファイル
+- `README.md`: 日本語 README
+- `README.en.md`: 英語 README
+- `README.cns.md`: 简体中文 README
 
 ## 目的
 

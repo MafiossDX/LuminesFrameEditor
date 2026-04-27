@@ -187,6 +187,7 @@
       grid-template-columns: repeat(var(--board-cols), var(--cell-size));
       gap: 2px;
       padding: 12px;
+      position: relative;
       border-radius: 7px;
       background:
         linear-gradient(180deg, rgba(43, 36, 29, 0.82), rgba(61, 49, 37, 0.96));
@@ -232,6 +233,18 @@
       outline-offset: -2px;
     }
 
+    .burst-outline {
+      position: absolute;
+      border-radius: 10px;
+      border: 2px solid rgba(255, 248, 236, 0.96);
+      box-shadow:
+        0 0 0 1px rgba(58, 42, 28, 0.56),
+        inset 0 0 0 1px rgba(58, 42, 28, 0.34),
+        0 10px 24px rgba(33, 19, 8, 0.18);
+      pointer-events: none;
+      z-index: 2;
+    }
+
     .field-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -260,6 +273,22 @@
       font-family: Consolas, "SFMono-Regular", monospace;
       font-size: 0.9rem;
       line-height: 1.5;
+    }
+
+    .toggle-field {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      color: var(--text);
+      user-select: none;
+    }
+
+    .toggle-field input {
+      width: 16px;
+      height: 16px;
+      margin: 0;
+      accent-color: var(--accent-strong);
     }
 
     .action,
@@ -462,6 +491,10 @@
           <span>Caption</span>
           <input id="frameCaption" type="text" placeholder="このフレームの説明">
         </label>
+        <label class="toggle-field">
+          <input id="showBurstOutline" type="checkbox">
+          <span>BURST枠を表示</span>
+        </label>
       </section>
 
       <section class="group">
@@ -551,6 +584,7 @@
       importSelection: null,
       importSelecting: false,
       importSelectionStart: null,
+      showBurstOutline: false,
       frames: [createFrame(16, 10)]
     };
 
@@ -562,6 +596,7 @@
     const projectSummaryEl = document.getElementById("projectSummary");
     const squareSummaryEl = document.getElementById("squareSummary");
     const captionEl = document.getElementById("frameCaption");
+    const showBurstOutlineEl = document.getElementById("showBurstOutline");
     const importCanvasEl = document.getElementById("importCanvas");
     const importStatusEl = document.getElementById("importStatus");
     const importSourceCanvas = document.createElement("canvas");
@@ -624,6 +659,18 @@
           boardEl.appendChild(cell);
         });
       });
+
+      if (state.showBurstOutline) {
+        getBurstOutlineSquares(frame.board).forEach((square) => {
+          const outline = document.createElement("div");
+          outline.className = "burst-outline";
+          outline.style.left = `calc(12px + ${square.x} * (var(--cell-size) + 2px))`;
+          outline.style.top = `calc(12px + ${square.y} * (var(--cell-size) + 2px))`;
+          outline.style.width = `calc(${square.size} * var(--cell-size) + ${(square.size - 1) * 2}px)`;
+          outline.style.height = `calc(${square.size} * var(--cell-size) + ${(square.size - 1) * 2}px)`;
+          boardEl.appendChild(outline);
+        });
+      }
     }
 
     function renderTimeline() {
@@ -648,6 +695,7 @@
     function syncFields() {
       const frame = currentFrame();
       captionEl.value = frame.caption || "";
+      showBurstOutlineEl.checked = state.showBurstOutline;
     }
 
     function getPlayablePalette() {
@@ -680,6 +728,30 @@
         prefix[y + size][x] +
         prefix[y][x]
       );
+    }
+
+    function getBurstOutlineSquares(board) {
+      const maxSize = Math.min(board.length, board[0]?.length || 0);
+      if (maxSize < 3) {
+        return [];
+      }
+
+      const squares = [];
+      getPlayablePalette().forEach((item) => {
+        const prefix = buildColorPrefix(board, item.value);
+        for (let size = 3; size <= maxSize; size += 1) {
+          for (let y = 0; y <= board.length - size; y += 1) {
+            for (let x = 0; x <= board[y].length - size; x += 1) {
+              if (getAreaSum(prefix, x, y, size) === size * size) {
+                squares.push({ x, y, size, value: item.value });
+              }
+            }
+          }
+        }
+      });
+
+      const largest = squares.sort((a, b) => b.size - a.size || a.y - b.y || a.x - b.x)[0];
+      return largest ? [largest] : [];
     }
 
     function countSquaresInClearArea(board, includeLargerSquares) {
@@ -922,6 +994,7 @@
         cols: state.cols,
         rows: state.rows,
         playbackMs: state.playbackMs,
+        showBurstOutline: state.showBurstOutline,
         frames: state.frames
       };
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
@@ -942,6 +1015,7 @@
         state.cols = payload.cols;
         state.rows = payload.rows;
         state.playbackMs = payload.playbackMs || 650;
+        state.showBurstOutline = Boolean(payload.showBurstOutline);
         state.frames = payload.frames.map((frame) => ({
           caption: frame.caption || "",
           board: frame.board.map((row) => row.map((value) => Number(value) || 0))
@@ -1010,6 +1084,15 @@
         });
       });
 
+      if (state.showBurstOutline) {
+        getBurstOutlineSquares(frame.board).forEach((square) => {
+          const x = padding + square.x * (cellSize + gap);
+          const y = padding + square.y * (cellSize + gap);
+          const size = square.size * cellSize + (square.size - 1) * gap;
+          drawBurstOutline(ctx, x, y, size);
+        });
+      }
+
       if (frame.caption) {
         ctx.fillStyle = "rgba(255, 248, 236, 0.92)";
         ctx.font = '16px "Segoe UI", "Yu Gothic UI", sans-serif';
@@ -1058,6 +1141,20 @@
       ctx.fillStyle = pattern || "#b8afa2";
       roundRect(ctx, x, y, size, size, 6);
       ctx.fill();
+    }
+
+    function drawBurstOutline(ctx, x, y, size) {
+      ctx.save();
+      ctx.strokeStyle = "rgba(58, 42, 28, 0.58)";
+      ctx.lineWidth = 4;
+      roundRect(ctx, x - 1, y - 1, size + 2, size + 2, 10);
+      ctx.stroke();
+
+      ctx.strokeStyle = "rgba(255, 248, 236, 0.96)";
+      ctx.lineWidth = 2;
+      roundRect(ctx, x, y, size, size, 10);
+      ctx.stroke();
+      ctx.restore();
     }
 
     function renderImportCanvas() {
@@ -1345,6 +1442,11 @@
       currentFrame().caption = event.target.value;
       renderTimeline();
       renderStatus();
+    });
+
+    showBurstOutlineEl.addEventListener("change", (event) => {
+      state.showBurstOutline = event.target.checked;
+      renderBoard();
     });
 
     document.querySelectorAll(".tool-button").forEach((button) => {

@@ -4,15 +4,16 @@
 
 To keep it easy to publish on GitHub Pages, the implementation is contained in a single file: `lumines_frame_editor.html`.
 
-URL: https://mafiossdx.github.io/LuminesFrameEditor/lumines_frame_editor.html
+URL: [https://mafiossdx.github.io/LuminesFrameEditor/lumines_frame_editor.html](https://mafiossdx.github.io/LuminesFrameEditor/lumines_frame_editor.html)
 
 ## Features
 
 - Edit a fixed-size `16 x 10` board
-- Place cells using 5 colors plus Garbage
+- Place cells using 6 colors plus Garbage
 - Add, duplicate, delete, and clear frames
 - Move through frames on a timeline and play them back in sequence
 - Add captions to individual frames
+- Show a BURST outline for only the single largest 3x3-or-larger square on the current frame
 - Export the current frame as a PNG
 - Paste a game screenshot with `Ctrl+V`, select the board area, and import it into the current frame
 - Show the number of color-specific squares in the current board's clear area
@@ -25,7 +26,7 @@ URL: https://mafiossdx.github.io/LuminesFrameEditor/lumines_frame_editor.html
 2. Choose a color from the palette on the left, then drag on the board to edit it.
 3. Use `Add` or `Duplicate` to create more frames, and write notes in `Caption` if needed.
 4. Press `Play` to preview the frames in order.
-5. Use `Export PNG` when you want to save the current frame as an image.
+5. Turn on `BURST outline` if needed, then use `Export PNG` to save the current frame as an image.
 
 If you want to reconstruct a board from an image, copy a game screen, press `Ctrl+V` on the page, drag over the board area in the preview on the right, and click `Import From Image`. The color detection is automatic, but it is not very accurate, so manual cleanup is often necessary.
 
