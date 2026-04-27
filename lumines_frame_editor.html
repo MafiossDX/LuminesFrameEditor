@@ -221,7 +221,8 @@
     .cell[data-value="3"] { background: #f0d05b; }
     .cell[data-value="4"] { background: #7a8cff; }
     .cell[data-value="5"] { background: #9db78a; }
-    .cell[data-value="6"] {
+    .cell[data-value="6"] { background: #fdfdfd; }
+    .cell[data-value="7"] {
       background:
         repeating-linear-gradient(45deg, #d7d0c6 0 6px, #a89f92 6px 12px);
     }
@@ -525,7 +526,8 @@
       { value: 3, label: "Gold", color: "#f0d05b" },
       { value: 4, label: "Blue", color: "#7a8cff" },
       { value: 5, label: "Olive", color: "#9db78a" },
-      { value: 6, label: "Garbage", color: "linear-gradient(45deg, #d7d0c6, #a89f92)" }
+      { value: 6, label: "White", color: "#fdfdfd" },
+      { value: 7, label: "Garbage", color: "linear-gradient(45deg, #d7d0c6, #a89f92)" }
     ];
 
     const state = {
@@ -649,7 +651,7 @@
     }
 
     function getPlayablePalette() {
-      return palette.filter((item) => item.value >= 1 && item.value <= 5);
+      return palette.filter((item) => item.value >= 1 && item.value <= 6);
     }
 
     function buildColorPrefix(board, colorValue) {
@@ -986,14 +988,15 @@
         2: "#37c9bf",
         3: "#f0d05b",
         4: "#7a8cff",
-        5: "#9db78a"
+        5: "#9db78a",
+        6: "#fdfdfd"
       };
 
       frame.board.forEach((row, y) => {
         row.forEach((value, x) => {
           const px = padding + x * (cellSize + gap);
           const py = padding + y * (cellSize + gap);
-          if (value === 6) {
+          if (value === 7) {
             drawGarbageCell(ctx, px, py, cellSize);
           } else {
             ctx.fillStyle = colorMap[value] || colorMap[0];
